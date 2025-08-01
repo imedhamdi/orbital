@@ -2,17 +2,26 @@ const assert = require('assert');
 const createHandleReport = require('../utils/moderation');
 
 function mockRedis() {
-  const store = new Map();
+  const zsets = new Map();
+  const hashes = new Map();
+  const expirations = new Set();
   return {
-    async sAdd(key, value) {
-      if (!store.has(key)) store.set(key, new Set());
-      store.get(key).add(value);
+    async zAdd(key, { score, value }) {
+      if (!zsets.has(key)) zsets.set(key, []);
+      zsets.get(key).push({ score, value });
     },
-    async sCard(key) {
-      return store.has(key) ? store.get(key).size : 0;
+    async zCount(key, min, max) {
+      if (!zsets.has(key)) return 0;
+      return zsets
+        .get(key)
+        .filter(item => item.score >= min && item.score <= max).length;
     },
     async expire(key) {
-      store.set(`${key}:expired`, true);
+      expirations.add(`${key}:expired`);
+    },
+    async hSet(key, field, value) {
+      if (!hashes.has(key)) hashes.set(key, {});
+      hashes.get(key)[field] = value;
     }
   };
 }
@@ -22,7 +31,10 @@ function test(desc, fn) {
 }
 
 const events = [];
-const io = { to: () => ({ emit: (e) => events.push(e) }) };
+const io = {
+  to: () => ({ emit: (e) => events.push(e) }),
+  emit: (e) => events.push(e)
+};
 const pubClient = mockRedis();
 const handleReport = createHandleReport({ pubClient, io });
 
