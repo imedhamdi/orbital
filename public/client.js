@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const nextBtn = document.getElementById('next-btn');
     const reportBtn = document.getElementById('report-btn');
     const settingsBtn = document.getElementById('settings-btn');
+    const logoutBtn = document.getElementById('logout-btn');
     
     // Modal paramètres
     const settingsModal = document.getElementById('settings-modal');
@@ -384,57 +385,63 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // 7. Gestion des connexions
-    joinBtn.addEventListener('click', async () => {
-        const pseudo = pseudoInput.value.trim();
+
+    async function startJoin(pseudo) {
+        localStorage.setItem('orbital-pseudo', pseudo);
+
         if (!pseudo) {
             ui.showError('Veuillez entrer un pseudo.');
             return;
         }
-        
+
         ui.clearError();
         joinBtn.disabled = true;
         joinBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion...';
-        
+
         try {
             // Obtenir les permissions média
-            localStream = await navigator.mediaDevices.getUserMedia({ 
-                video: true, 
-                audio: true 
+            localStream = await navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: true
             });
-            
+
             localVideo.srcObject = localStream;
             userPseudoDisplay.textContent = pseudo;
-            
+
             // Initialiser la liste des périphériques
             await getMediaDevices();
-            
+
             // Basculer vers la vue chat
             loginView.classList.add('hidden');
             chatView.classList.remove('hidden');
             dashboardView.classList.remove('hidden');
             dashboardUserPseudo.textContent = pseudo;
-            
+
             // Initialiser la connexion Socket.IO
             initializeSocket();
-            
+
             // Envoyer la demande de connexion
             socket.emit('user:join', { pseudo });
             ui.showWaiting();
-            
+
         } catch (error) {
             console.error('Failed to get media devices:', error);
-            
+
             let errorMessage = 'Impossible d\'accéder à la caméra/microphone.';
             if (error.name === 'NotAllowedError') {
                 errorMessage = 'Permission refusée. Veuillez autoriser l\'accès à la caméra et au microphone.';
             } else if (error.name === 'NotFoundError') {
                 errorMessage = 'Aucun périphérique média trouvé.';
             }
-            
+
             ui.showError(errorMessage);
             joinBtn.disabled = false;
             joinBtn.innerHTML = '<i class="fas fa-rocket"></i> Démarrer';
         }
+    }
+
+    joinBtn.addEventListener('click', async () => {
+        await startJoin(pseudoInput.value.trim());
     });
     
     function initializeSocket() {
@@ -628,6 +635,14 @@ document.addEventListener('DOMContentLoaded', () => {
     settingsBtn.addEventListener('click', () => {
         ui.showSettingsModal();
     });
+
+    logoutBtn.addEventListener('click', () => {
+        localStorage.removeItem('orbital-pseudo');
+        if (socket) {
+            socket.disconnect();
+        }
+        window.location.reload();
+    });
     
     closeSettingsBtn.addEventListener('click', () => {
         ui.hideSettingsModal();
@@ -668,6 +683,14 @@ document.addEventListener('DOMContentLoaded', () => {
     mirrorToggle.addEventListener('change', () => {
         localVideo.style.transform = mirrorToggle.checked ? 'scaleX(-1)' : 'scaleX(1)';
     });
+
+    function attemptAutoLogin() {
+        const savedPseudo = localStorage.getItem('orbital-pseudo');
+        if (savedPseudo) {
+            pseudoInput.value = savedPseudo;
+            startJoin(savedPseudo);
+        }
+    }
     
     // 10. Nettoyage avant de quitter
     window.addEventListener('beforeunload', () => {
@@ -683,7 +706,9 @@ document.addEventListener('DOMContentLoaded', () => {
         stopPing();
         cleanupConnection();
     });
-    
+
     // 11. Détection des changements de périphériques
     navigator.mediaDevices.addEventListener('devicechange', getMediaDevices);
+
+    attemptAutoLogin();
 });
