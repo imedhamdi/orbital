@@ -12,16 +12,38 @@ document.addEventListener('DOMContentLoaded', () => {
     const remoteVideo = document.getElementById('remote-video');
     const statusOverlay = document.getElementById('status-overlay');
     const statusText = document.getElementById('status-text');
+    const audioCanvas = document.getElementById('audio-visualizer');
+    const icebreakerText = document.getElementById('icebreaker-text');
     const videoPlaceholder = document.getElementById('video-placeholder');
     const partnerPseudoPlaceholder = document.getElementById('partner-pseudo-placeholder');
     
     const nextBtn = document.getElementById('next-btn');
     const reportBtn = document.getElementById('report-btn');
+    const muteBtn = document.getElementById('mute-btn');
+    const videoBtn = document.getElementById('video-btn');
+    const mainControls = document.querySelector('.main-controls');
+    const videosContainer = document.querySelector('.videos-container');
+    const modalContainer = document.getElementById('modal-container');
+    const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+    const modalCancelBtn = document.getElementById('modal-cancel-btn');
 
     // 2. Variables globales
     let localStream;
     let peerConnection;
     let socket;
+    let icebreakerInterval;
+    let audioCtx;
+    let analyser;
+    let dataArray;
+    let controlsTimeout;
+
+    const icebreakers = [
+        "Quel est ton super pouvoir secret ?",
+        "Si tu pouvais voyager dans le temps, où irais-tu ?",
+        "Quelle musique écoutes-tu en boucle ?",
+        "Ton plat préféré de tous les temps ?",
+        "Quel serait ton animal totem ?"
+    ];
 
     // 3. Configuration WebRTC
     const rtcConfig = {
@@ -49,21 +71,43 @@ document.addEventListener('DOMContentLoaded', () => {
             videoPlaceholder.classList.add('hidden');
             remoteVideo.style.display = 'none';
         },
-        showConnected(partnerPseudo) {
+        showConnected(partnerPseudo, countryCode) {
             statusOverlay.classList.add('hidden');
             videoPlaceholder.classList.remove('hidden');
-            partnerPseudoPlaceholder.textContent = `Connexion avec ${partnerPseudo}...`;
+            const flag = countryCode ? countryCode.replace(/./g, c => String.fromCodePoint(c.charCodeAt(0) + 127397)) : '';
+            partnerPseudoPlaceholder.textContent = `Connexion avec ${partnerPseudo} ${flag}...`;
         },
         showVideo() {
             videoPlaceholder.classList.add('hidden');
             remoteVideo.style.display = 'block';
         },
         showPartnerLeft() {
+            playSound('disconnect');
             cleanupConnection();
             this.showWaiting();
             statusText.textContent = 'Partenaire déconnecté. Recherche en cours...';
         }
     };
+
+    function playSound(type) {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        gain.gain.value = 0.1;
+        if (type === 'connect') {
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            osc.frequency.linearRampToValueAtTime(1760, ctx.currentTime + 0.15);
+        } else {
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            osc.frequency.linearRampToValueAtTime(440, ctx.currentTime + 0.15);
+        }
+        osc.start();
+        osc.stop(ctx.currentTime + 0.15);
+        osc.onended = () => ctx.close();
+    }
 
     // 5. Logique de connexion
     joinBtn.addEventListener('click', async () => {
@@ -79,6 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             localVideo.srcObject = localStream;
+            setupAudioVisualizer();
 
             loginView.classList.add('hidden');
             chatView.classList.remove('hidden');
@@ -117,8 +162,18 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log(`[State Update] state: ${state}, initiator: ${initiator}`);
         if (state === 'waiting') {
             ui.showWaiting();
+            if (!icebreakerInterval) {
+                icebreakerInterval = setInterval(() => {
+                    const msg = icebreakers[Math.floor(Math.random() * icebreakers.length)];
+                    icebreakerText.textContent = msg;
+                }, 4000);
+            }
         } else if (state === 'connected') {
-            ui.showConnected(partner.pseudo);
+            playSound('connect');
+            clearInterval(icebreakerInterval);
+            icebreakerInterval = null;
+            icebreakerText.textContent = '';
+            ui.showConnected(partner.pseudo, partner.country);
             createPeerConnection();
             if (initiator) {
                 try {
@@ -181,6 +236,40 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch(e) { console.error("Error adding ICE candidate:", e); }
     }
 
+    function setupAudioVisualizer() {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioCtx.createMediaStreamSource(localStream);
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        const bufferLength = analyser.frequencyBinCount;
+        dataArray = new Uint8Array(bufferLength);
+        source.connect(analyser);
+        drawVisualizer();
+    }
+
+    function drawVisualizer() {
+        if (!analyser) return;
+        requestAnimationFrame(drawVisualizer);
+        analyser.getByteFrequencyData(dataArray);
+        const canvasCtx = audioCanvas.getContext('2d');
+        const { width, height } = audioCanvas;
+        canvasCtx.clearRect(0, 0, width, height);
+        const barWidth = width / dataArray.length;
+        let sum = 0;
+        dataArray.forEach((v, i) => {
+            const barHeight = (v / 255) * height;
+            canvasCtx.fillStyle = '#bb86fc';
+            canvasCtx.fillRect(i * barWidth, height - barHeight, barWidth - 1, barHeight);
+            sum += v;
+        });
+        const avg = sum / dataArray.length;
+        if (avg > 80) {
+            document.getElementById('local-video-wrapper').classList.add('speaking');
+        } else {
+            document.getElementById('local-video-wrapper').classList.remove('speaking');
+        }
+    }
+
     function cleanupConnection() {
         if (peerConnection) {
             peerConnection.onicecandidate = null;
@@ -188,10 +277,15 @@ document.addEventListener('DOMContentLoaded', () => {
             peerConnection.close();
             peerConnection = null;
         }
+        if (audioCtx) {
+            audioCtx.close();
+            audioCtx = null;
+        }
         remoteVideo.srcObject = null;
         remoteVideo.style.display = 'none';
         videoPlaceholder.classList.remove('hidden');
         partnerPseudoPlaceholder.textContent = '';
+        document.getElementById('local-video-wrapper').classList.remove('speaking');
     }
 
     // 8. Contrôles
@@ -199,13 +293,43 @@ document.addEventListener('DOMContentLoaded', () => {
         socket.emit('user:request-next');
         cleanupConnection();
         ui.showWaiting();
+        playSound('disconnect');
+    });
+
+    muteBtn.addEventListener('click', () => {
+        const track = localStream.getAudioTracks()[0];
+        if (!track) return;
+        track.enabled = !track.enabled;
+        muteBtn.classList.toggle('off', !track.enabled);
+    });
+
+    videoBtn.addEventListener('click', () => {
+        const track = localStream.getVideoTracks()[0];
+        if (!track) return;
+        track.enabled = !track.enabled;
+        videoBtn.classList.toggle('off', !track.enabled);
     });
 
     reportBtn.addEventListener('click', () => {
-        if (confirm('Voulez-vous vraiment signaler ce partenaire pour comportement inapproprié ?')) {
-            socket.emit('user:report');
-            nextBtn.click(); // Passe automatiquement au suivant
-        }
+        modalContainer.classList.remove('hidden');
+    });
+
+    modalCancelBtn.addEventListener('click', () => {
+        modalContainer.classList.add('hidden');
+    });
+
+    modalConfirmBtn.addEventListener('click', () => {
+        socket.emit('user:report');
+        modalContainer.classList.add('hidden');
+        nextBtn.click();
+    });
+
+    videosContainer.addEventListener('mousemove', () => {
+        mainControls.style.opacity = '1';
+        clearTimeout(controlsTimeout);
+        controlsTimeout = setTimeout(() => {
+            mainControls.style.opacity = '0';
+        }, 3000);
     });
 
     // Nettoyage avant de quitter la page
@@ -215,6 +339,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (localStream) {
             localStream.getTracks().forEach(track => track.stop());
+        }
+        if (audioCtx) {
+            audioCtx.close();
         }
     });
 });

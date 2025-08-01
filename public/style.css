@@ -116,6 +116,10 @@ video {
     background-color: #111;
 }
 
+#remote-video {
+    transition: opacity 0.5s ease;
+}
+
 #local-video-wrapper {
     position: absolute;
     bottom: 2rem;
@@ -125,6 +129,28 @@ video {
     z-index: 10;
     border: 2px solid var(--primary-color);
     box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+
+.local-controls {
+    position: absolute;
+    bottom: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 0.5rem;
+    background-color: rgba(0,0,0,0.5);
+    padding: 0.3rem 0.6rem;
+    border-radius: 8px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+#local-video-wrapper:hover .local-controls {
+    opacity: 1;
+}
+
+.local-controls button.off svg {
+    color: var(--error-color);
 }
 
 #remote-video-wrapper {
@@ -144,7 +170,7 @@ video {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    background-color: rgba(0, 0, 0, 0.7);
+    background: radial-gradient(circle at center, rgba(18,18,18,0.8) 0%, rgba(18,18,18,1) 100%);
     z-index: 5;
     opacity: 1;
     transition: opacity 0.5s ease;
@@ -159,6 +185,19 @@ video {
     font-size: 1.5rem;
     font-weight: 600;
     margin-top: 1rem;
+}
+
+#audio-visualizer {
+    width: 80%;
+    height: 60px;
+    margin-top: 1rem;
+}
+
+#icebreaker-text {
+    margin-top: 0.5rem;
+    font-size: 1rem;
+    opacity: 0.8;
+    text-align: center;
 }
 
 .placeholder-icon {
@@ -182,7 +221,7 @@ video {
     animation: spin 1s linear infinite;
 }
 
-.controls {
+.main-controls {
     padding: 1rem;
     background-color: var(--surface-color);
     text-align: center;
@@ -190,6 +229,12 @@ video {
     display: flex;
     justify-content: center;
     gap: 1rem;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.videos-container:hover .main-controls {
+    opacity: 1;
 }
 
 /* --- Éléments communs --- */
@@ -202,6 +247,9 @@ button {
     cursor: pointer;
     transition: all 0.2s ease;
     color: #fff;
+}
+button:hover {
+    transform: scale(1.05);
 }
 
 #join-btn {
@@ -237,6 +285,27 @@ button:active {
     display: none !important;
 }
 
+#modal-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 20;
+}
+
+#modal-content {
+    background-color: var(--surface-color);
+    padding: 1.5rem 2rem;
+    border-radius: 10px;
+    text-align: center;
+    animation: fadeIn 0.3s ease;
+}
+
 /* Animations */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
@@ -244,6 +313,16 @@ button:active {
 }
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+@keyframes pulse-border {
+    0% { box-shadow: 0 0 0 0 rgba(187,134,252,0.4); }
+    50% { box-shadow: 0 0 10px 4px rgba(187,134,252,0.8); }
+    100% { box-shadow: 0 0 0 0 rgba(187,134,252,0.4); }
+}
+
+.speaking {
+    animation: pulse-border 1s infinite;
 }
 
 /* Responsive */

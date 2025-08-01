@@ -7,6 +7,7 @@ const path = require('path');
 const { Server } = require('socket.io');
 const { createClient } = require('redis');
 const { createAdapter } = require('@socket.io/redis-adapter');
+const geoip = require('geoip-lite');
 
 // 2. Initialisation
 const app = express();
@@ -61,6 +62,10 @@ async function startServer() {
 // Gestionnaire pour chaque nouvelle connexion
 function handleConnection(socket) {
     console.log(`[Connection] User connected: ${socket.id}`);
+    // Récupération de l'adresse IP, compatible proxy
+    const ip = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
+    const geo = geoip.lookup(ip);
+    const countryCode = geo ? geo.country : 'XX';
 
     // Événement: un utilisateur rejoint le système
     socket.on('user:join', async ({ pseudo }) => {
@@ -68,7 +73,8 @@ function handleConnection(socket) {
         // Stocke les informations de l'utilisateur dans Redis
         await pubClient.hSet(KEYS.USER_DATA(socket.id), {
             pseudo: pseudo || 'Anonymous',
-            status: 'searching'
+            status: 'searching',
+            countryCode
         });
         await findPartner(socket);
     });
@@ -122,10 +128,14 @@ async function findPartner(socket) {
         }
 
         console.log(`[Matchmaking] Partner found for ${socket.id}: ${partnerId}`);
-        const [currentUserPseudo, partnerPseudo] = await Promise.all([
-            pubClient.hGet(KEYS.USER_DATA(socket.id), 'pseudo'),
-            pubClient.hGet(KEYS.USER_DATA(partnerId), 'pseudo')
+        const [currentUserData, partnerData] = await Promise.all([
+            pubClient.hGetAll(KEYS.USER_DATA(socket.id)),
+            pubClient.hGetAll(KEYS.USER_DATA(partnerId))
         ]);
+        const currentUserPseudo = currentUserData.pseudo;
+        const currentUserCountry = currentUserData.countryCode;
+        const partnerPseudo = partnerData.pseudo;
+        const partnerCountry = partnerData.countryCode;
 
         // On utilise une transaction Redis pour assurer l'atomicité
         const transaction = pubClient.multi();
@@ -136,12 +146,12 @@ async function findPartner(socket) {
         // Notifier les deux utilisateurs
         io.to(socket.id).emit('app:state-update', {
             state: 'connected',
-            partner: { pseudo: partnerPseudo },
+            partner: { pseudo: partnerPseudo, country: partnerCountry },
             initiator: true
         });
         io.to(partnerId).emit('app:state-update', {
             state: 'connected',
-            partner: { pseudo: currentUserPseudo },
+            partner: { pseudo: currentUserPseudo, country: currentUserCountry },
             initiator: false
         });
 

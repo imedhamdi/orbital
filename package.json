@@ -1,6 +1,6 @@
 {
   "name": "orbital-chat",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "description": "Random video chat application",
   "main": "server.js",
   "scripts": {
@@ -12,7 +12,8 @@
     "express": "^4.18.2",
     "redis": "^4.6.10",
     "socket.io": "^4.7.2",
-    "socket.io-redis": "^6.1.1"
+    "socket.io-redis": "^6.1.1",
+    "geoip-lite": "^1.4.10"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
