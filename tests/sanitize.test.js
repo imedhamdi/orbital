@@ -12,10 +12,10 @@ function test(description, fn) {
   }
 }
 
-test('removes script tags and trims', () => {
+test('escapes html and trims', () => {
   const input = '<script>alert(1)</script>hello world';
   const result = sanitize(input);
-  assert.strictEqual(result, 'hello world');
+  assert.strictEqual(result, '&lt;script&gt;alert(1)&lt;/script&gt;hello world');
 });
 
 test('returns empty string for non strings', () => {

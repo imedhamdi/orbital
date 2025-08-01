@@ -1,11 +1,17 @@
-// server.js - Version 3.0 (Ultimate - Sans dotenv)
+// server.js - Version 3.0
 
-// 1. Configuration manuelle des variables d'environnement
+// Chargement des variables d'environnement
+try {
+  require('dotenv').config();
+} catch (err) {
+  console.warn('dotenv not installed, skipping configuration file load');
+}
+
 const config = {
-  PORT: 3000, // Port par défaut
-  REDIS_URL: 'redis://localhost:6379', // URL Redis par défaut
-  ALLOWED_ORIGINS: 'http://localhost:3000', // Origines autorisées
-  REDIS_TLS: false // TLS désactivé par défaut
+  PORT: process.env.PORT || 3000,
+  REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',
+  ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS || 'http://localhost:3000',
+  REDIS_TLS: process.env.REDIS_TLS === 'true'
 };
 
 // 2. Imports
@@ -112,10 +118,10 @@ async function getGeoData(ip, pubClient) {
 }
 
 // Création des clients Redis
-const pubClient = createClient({ 
+const pubClient = createClient({
     url: config.REDIS_URL,
     socket: {
-        tls: config.REDIS_TLS === 'true',
+        tls: config.REDIS_TLS,
         rejectUnauthorized: false
     }
 });
