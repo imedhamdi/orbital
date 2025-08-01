@@ -218,10 +218,10 @@ function handleConnection(socket) {
             });
 
             await findPartner(socket);
-            callback({ success: true });
+            callback?.({ success: true });
         } catch (err) {
             console.error('Join error:', err);
-            callback({ success: false, error: err.message });
+            callback?.({ success: false, error: err.message });
         }
     });
 
@@ -230,12 +230,12 @@ function handleConnection(socket) {
         try {
             const partnerId = await pubClient.hGet(KEYS.USER_DATA(socket.id), 'partnerId');
             if (!partnerId) {
-                return callback({ success: false, error: 'No partner found' });
+                return callback?.({ success: false, error: 'No partner found' });
             }
 
             const cleanText = sanitize(text);
             if (!cleanText) {
-                return callback({ success: false, error: 'Empty message' });
+                return callback?.({ success: false, error: 'Empty message' });
             }
 
             const payload = { 
@@ -258,10 +258,10 @@ function handleConnection(socket) {
 
             // Envoyer au partenaire
             io.to(partnerId).emit('chat:text', payload);
-            callback({ success: true });
+            callback?.({ success: true });
         } catch (err) {
             console.error('Chat error:', err);
-            callback({ success: false, error: err.message });
+            callback?.({ success: false, error: err.message });
         }
     });
 
@@ -269,27 +269,27 @@ function handleConnection(socket) {
     socket.on('webrtc:offer', async (data, callback) => {
         try {
             await relayWebRTCSignal(socket, 'webrtc:offer', data);
-            callback({ success: true });
+            callback?.({ success: true });
         } catch (err) {
-            callback({ success: false, error: err.message });
+            callback?.({ success: false, error: err.message });
         }
     });
 
     socket.on('webrtc:answer', async (data, callback) => {
         try {
             await relayWebRTCSignal(socket, 'webrtc:answer', data);
-            callback({ success: true });
+            callback?.({ success: true });
         } catch (err) {
-            callback({ success: false, error: err.message });
+            callback?.({ success: false, error: err.message });
         }
     });
 
     socket.on('webrtc:ice-candidate', async (data, callback) => {
         try {
             await relayWebRTCSignal(socket, 'webrtc:ice-candidate', data);
-            callback({ success: true });
+            callback?.({ success: true });
         } catch (err) {
-            callback({ success: false, error: err.message });
+            callback?.({ success: false, error: err.message });
         }
     });
 
@@ -298,9 +298,9 @@ function handleConnection(socket) {
         try {
             console.log(`[Next] User ${socket.id} requests a new partner`);
             await cleanupAndFindNewPartner(socket);
-            callback({ success: true });
+            callback?.({ success: true });
         } catch (err) {
-            callback({ success: false, error: err.message });
+            callback?.({ success: false, error: err.message });
         }
     });
     
@@ -312,12 +312,12 @@ function handleConnection(socket) {
             if (partnerId) {
                 console.log(`[Report] User ${socket.id} reported partner ${partnerId}`);
                 await handleReport(partnerId);
-                callback({ success: true });
+                callback?.({ success: true });
             } else {
-                callback({ success: false, error: 'No partner to report' });
+                callback?.({ success: false, error: 'No partner to report' });
             }
         } catch (err) {
-            callback({ success: false, error: err.message });
+            callback?.({ success: false, error: err.message });
         }
     });
 
