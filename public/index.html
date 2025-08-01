@@ -51,6 +51,27 @@
             </div>
         </div>
 
+        <!-- Tableau de Bord -->
+        <div id="dashboard-view" class="hidden">
+            <div id="dashboard-user-profile">
+                <span id="dashboard-user-pseudo"></span>
+            </div>
+            <div id="dashboard-partner-info"></div>
+            <div id="dashboard-controls">
+                <button id="next-btn" class="btn-primary">
+                    <i class="fas fa-random"></i>
+                    <span>Suivant</span>
+                </button>
+                <button id="report-btn" class="btn-danger">
+                    <i class="fas fa-flag"></i>
+                    <span>Signaler</span>
+                </button>
+                <button id="settings-btn" class="btn-secondary" title="Paramètres">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </div>
+
         <!-- Vue du chat -->
         <div id="chat-view" class="hidden">
             <div class="videos-container">
@@ -68,13 +89,6 @@
                     <div id="video-placeholder" class="placeholder">
                         <div class="placeholder-icon">
                             <i class="fas fa-user-astronaut"></i>
-                        </div>
-                        <div class="partner-info">
-                            <p id="partner-pseudo-placeholder"></p>
-                            <div class="connection-info">
-                                <span id="connection-status"><i class="fas fa-circle-notch fa-spin"></i> Connexion en cours</span>
-                                <span id="connection-ping"></span>
-                            </div>
                         </div>
                     </div>
                     
@@ -113,19 +127,7 @@
                 </form>
             </div>
             
-            <div class="controls">
-                <button id="next-btn" class="btn-primary">
-                    <i class="fas fa-random"></i>
-                    <span>Suivant</span>
-                </button>
-                <button id="report-btn" class="btn-danger">
-                    <i class="fas fa-flag"></i>
-                    <span>Signaler</span>
-                </button>
-                <button id="settings-btn" class="btn-secondary" title="Paramètres">
-                    <i class="fas fa-cog"></i>
-                </button>
-            </div>
+
         </div>
         
         <!-- Modal Paramètres -->

@@ -14,9 +14,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusOverlay = document.getElementById('status-overlay');
     const statusText = document.getElementById('status-text');
     const videoPlaceholder = document.getElementById('video-placeholder');
-    const partnerPseudoPlaceholder = document.getElementById('partner-pseudo-placeholder');
-    const connectionStatus = document.getElementById('connection-status');
-    const connectionPing = document.getElementById('connection-ping');
+    const dashboardView = document.getElementById('dashboard-view');
+    const dashboardUserPseudo = document.getElementById('dashboard-user-pseudo');
+    const dashboardPartnerInfo = document.getElementById('dashboard-partner-info');
+    let connectionStatus = document.getElementById('connection-status');
+    let connectionPing = document.getElementById('connection-ping');
     const userPseudoDisplay = document.getElementById('user-pseudo');
     
     // Contrôles vidéo
@@ -75,8 +77,12 @@ document.addEventListener('DOMContentLoaded', () => {
             statusOverlay.classList.remove('hidden');
             videoPlaceholder.classList.add('hidden');
             remoteVideo.style.display = 'none';
-            connectionStatus.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Connexion en cours';
-            connectionPing.textContent = '';
+            if (connectionStatus) {
+                connectionStatus.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Connexion en cours';
+            }
+            if (connectionPing) {
+                connectionPing.textContent = '';
+            }
         },
         
         showConnected(partnerData) {
@@ -85,13 +91,19 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const { pseudo, country } = partnerData;
             const tooltip = country.name ? `En direct de ${country.name}` : "D'origine inconnue";
-            
-            partnerPseudoPlaceholder.innerHTML = `
-                ${pseudo}
-                <span class="country-badge" data-tooltip="${tooltip}">${country.emoji}</span>
+
+            dashboardPartnerInfo.innerHTML = `
+                <h4>Partenaire</h4>
+                <p id="partner-pseudo-placeholder">${pseudo} <span class="country-badge" data-tooltip="${tooltip}">${country.emoji}</span></p>
+                <div class="connection-info">
+                    <span id="connection-status"><i class="fas fa-circle-check"></i> Connecté</span>
+                    <span id="connection-ping"></span>
+                </div>
             `;
-            
-            connectionStatus.innerHTML = '<i class="fas fa-circle-check"></i> Connecté';
+
+            // Mettre à jour les références après insertion
+            connectionStatus = document.getElementById('connection-status');
+            connectionPing = document.getElementById('connection-ping');
             
             if (window.gsap) {
                 gsap.from('.country-badge', { 
@@ -116,6 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
             statusText.textContent = 'Partenaire déconnecté. Recherche en cours...';
             connectionStatus.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Recherche en cours';
             connectionPing.textContent = '';
+            dashboardPartnerInfo.innerHTML = '';
             stopPing();
             cleanupConnection();
         },
@@ -320,7 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         remoteVideo.style.display = 'none';
         videoPlaceholder.classList.remove('hidden');
-        partnerPseudoPlaceholder.textContent = '';
+        dashboardPartnerInfo.innerHTML = '';
         currentPartnerId = null;
         
         chatUI.clearMessages();
@@ -398,6 +411,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Basculer vers la vue chat
             loginView.classList.add('hidden');
             chatView.classList.remove('hidden');
+            dashboardView.classList.remove('hidden');
+            dashboardUserPseudo.textContent = pseudo;
             
             // Initialiser la connexion Socket.IO
             initializeSocket();
