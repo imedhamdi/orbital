@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orbital Chat - Connexion Vidéo Aléatoire</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app-container">
+        <!-- Vue de connexion -->
+        <div id="login-view">
+            <div class="card">
+                <h1>Orbital Chat</h1>
+                <p>Entrez un pseudo pour explorer des conversations aléatoires.</p>
+                <input type="text" id="pseudo-input" placeholder="Votre pseudo..." autocomplete="off" maxlength="20">
+                <button id="join-btn">🚀 Lancer la connexion</button>
+                <div id="error-box" class="hidden"></div>
+            </div>
+        </div>
+
+        <!-- Vue du chat -->
+        <div id="chat-view" class="hidden">
+            <div class="videos-container">
+                <!-- Vidéo distante -->
+                <div id="remote-video-wrapper" class="video-wrapper">
+                    <video id="remote-video" autoplay playsinline></video>
+                    <!-- Overlay de statut -->
+                    <div id="status-overlay">
+                        <div class="spinner"></div>
+                        <p id="status-text">Recherche d'un partenaire...</p>
+                    </div>
+                     <!-- Placeholder/Skeleton -->
+                    <div id="video-placeholder" class="placeholder">
+                        <div class="placeholder-icon">👤</div>
+                        <p id="partner-pseudo-placeholder"></p>
+                    </div>
+                </div>
+                <!-- Vidéo locale -->
+                <div id="local-video-wrapper" class="video-wrapper">
+                    <video id="local-video" autoplay muted playsinline></video>
+                </div>
+            </div>
+            <div class="controls">
+                <button id="next-btn">Suivant ➡️</button>
+                <button id="report-btn" class="danger">Signaler 🚩</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
+</body>
+</html>
