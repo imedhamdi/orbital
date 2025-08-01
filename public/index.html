@@ -3,21 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orbital Chat - Connexion Vidéo Aléatoire</title>
+    <title>Orbital Chat - Rencontres Vidéo Aléatoires</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="theme-color" content="#121212">
 </head>
 <body>
     <div id="app-container">
         <!-- Vue de connexion -->
         <div id="login-view">
             <div class="card">
-                <h1>Orbital Chat</h1>
-                <p>Entrez un pseudo pour explorer des conversations aléatoires.</p>
-                <input type="text" id="pseudo-input" placeholder="Votre pseudo..." autocomplete="off" maxlength="20">
-                <button id="join-btn">🚀 Lancer la connexion</button>
+                <div class="logo">
+                    <i class="fas fa-satellite-dish"></i>
+                    <h1>Orbital Chat</h1>
+                </div>
+                <p class="subtitle">Rencontrez des personnes du monde entier en vidéo</p>
+                
+                <div class="input-group">
+                    <input type="text" id="pseudo-input" placeholder="Votre pseudo..." autocomplete="off" maxlength="20">
+                    <button id="join-btn">
+                        <span class="btn-content">
+                            <i class="fas fa-rocket"></i>
+                            <span>Démarrer</span>
+                        </span>
+                    </button>
+                </div>
+                
+                <div class="features">
+                    <div class="feature">
+                        <i class="fas fa-globe"></i>
+                        <span>Rencontres internationales</span>
+                    </div>
+                    <div class="feature">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Modération active</span>
+                    </div>
+                    <div class="feature">
+                        <i class="fas fa-comments"></i>
+                        <span>Chat texte & vidéo</span>
+                    </div>
+                </div>
+                
                 <div id="error-box" class="hidden"></div>
             </div>
         </div>
@@ -28,32 +57,112 @@
                 <!-- Vidéo distante -->
                 <div id="remote-video-wrapper" class="video-wrapper">
                     <video id="remote-video" autoplay playsinline></video>
+                    
                     <!-- Overlay de statut -->
                     <div id="status-overlay">
                         <div class="spinner"></div>
                         <p id="status-text">Recherche d'un partenaire...</p>
                     </div>
-                     <!-- Placeholder/Skeleton -->
+                    
+                    <!-- Placeholder/Skeleton -->
                     <div id="video-placeholder" class="placeholder">
-                        <div class="placeholder-icon">👤</div>
-                        <p id="partner-pseudo-placeholder"></p>
+                        <div class="placeholder-icon">
+                            <i class="fas fa-user-astronaut"></i>
+                        </div>
+                        <div class="partner-info">
+                            <p id="partner-pseudo-placeholder"></p>
+                            <div class="connection-info">
+                                <span id="connection-status"><i class="fas fa-circle-notch fa-spin"></i> Connexion en cours</span>
+                                <span id="connection-ping"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="video-controls">
+                        <button id="toggle-video" class="control-btn" title="Activer/Désactiver la vidéo">
+                            <i class="fas fa-video"></i>
+                        </button>
+                        <button id="toggle-audio" class="control-btn" title="Activer/Désactiver le microphone">
+                            <i class="fas fa-microphone"></i>
+                        </button>
                     </div>
                 </div>
+                
                 <!-- Vidéo locale -->
                 <div id="local-video-wrapper" class="video-wrapper">
                     <video id="local-video" autoplay muted playsinline></video>
+                    <div class="local-video-overlay">
+                        <span id="user-pseudo"></span>
+                    </div>
                 </div>
             </div>
+            
             <div id="text-chat">
+                <div id="chat-header">
+                    <span>Messages</span>
+                    <button id="toggle-chat" title="Réduire/Agrandir le chat">
+                        <i class="fas fa-chevron-up"></i>
+                    </button>
+                </div>
                 <div id="chat-messages"></div>
                 <form id="chat-form">
-                    <input id="chat-input" type="text" autocomplete="off" placeholder="Message..." maxlength="200" />
-                    <button type="submit">Envoyer</button>
+                    <input id="chat-input" type="text" autocomplete="off" placeholder="Écrire un message..." maxlength="200" />
+                    <button type="submit" id="send-btn">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
                 </form>
             </div>
+            
             <div class="controls">
-                <button id="next-btn">Suivant ➡️</button>
-                <button id="report-btn" class="danger">Signaler 🚩</button>
+                <button id="next-btn" class="btn-primary">
+                    <i class="fas fa-random"></i>
+                    <span>Suivant</span>
+                </button>
+                <button id="report-btn" class="btn-danger">
+                    <i class="fas fa-flag"></i>
+                    <span>Signaler</span>
+                </button>
+                <button id="settings-btn" class="btn-secondary" title="Paramètres">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Modal Paramètres -->
+        <div id="settings-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Paramètres</h3>
+                    <button id="close-settings" class="close-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="setting-group">
+                        <label for="video-input">Caméra</label>
+                        <select id="video-input"></select>
+                    </div>
+                    <div class="setting-group">
+                        <label for="audio-input">Microphone</label>
+                        <select id="audio-input"></select>
+                    </div>
+                    <div class="setting-group">
+                        <label for="audio-output">Haut-parleur</label>
+                        <select id="audio-output"></select>
+                    </div>
+                    <div class="setting-group">
+                        <label>
+                            <input type="checkbox" id="mirror-toggle" checked>
+                            Miroir local
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="save-settings" class="btn-primary">
+                        <i class="fas fa-save"></i>
+                        <span>Enregistrer</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
