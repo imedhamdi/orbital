@@ -287,13 +287,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. Configuration WebRTC
     const rtcConfig = {
         iceServers: [
-            // Serveur TURN - À remplacer par votre configuration
-            { 
-                urls: 'turn:your-turn-server.com:3478',
-                username: 'username',
-                credential: 'password'
-            },
-            // Serveurs STUN publics
+            // TODO: Les identifiants du serveur TURN doivent être récupérés
+            // de manière dynamique et sécurisée depuis le serveur.
+            { urls: 'turn:your-turn-server.com:3478' },
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
             { urls: 'stun:stun2.l.google.com:19302' }
