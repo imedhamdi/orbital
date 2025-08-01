@@ -52,10 +52,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // 3. Configuration WebRTC
     const rtcConfig = {
         iceServers: [
+            // Serveur TURN pour traverser les NATs symétriques et agir comme relais
+            { urls: '__TURN_URL__', username: '__TURN_USERNAME__', credential: '__TURN_CREDENTIAL__' },
+            // Serveurs STUN publics
             { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            // En production, ajouter un serveur TURN est crucial
-            // { urls: 'turn:your.turn.server', username: 'user', credential: 'password' }
+            { urls: 'stun:stun1.l.google.com:19302' }
         ]
     };
 
