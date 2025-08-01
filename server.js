@@ -9,6 +9,13 @@ const { createClient } = require('redis');
 const { createAdapter } = require('@socket.io/redis-adapter');
 const sanitize = require('./utils/sanitize');
 const createHandleReport = require('./utils/moderation');
+let geoip;
+try {
+    geoip = require('geoip-lite');
+} catch (e) {
+    console.warn('geoip-lite not installed, geolocation disabled.');
+    geoip = { lookup: () => null };
+}
 
 let handleReport;
 
@@ -30,6 +37,35 @@ const KEYS = {
     USER_DATA: (id) => `orbital:user:${id}`,
 };
 
+const GEOIP_CACHE_PREFIX = 'orbital:geoip:';
+
+function getCountryFlagEmoji(code) {
+    return code === 'XX'
+        ? '✨'
+        : String.fromCodePoint(...[...code.toUpperCase()].map(c => 127397 + c.charCodeAt()));
+}
+
+const displayNames = new Intl.DisplayNames(['fr'], { type: 'region' });
+function getCountryName(code) {
+    if (code === 'XX') return '';
+    try { return displayNames.of(code); } catch (_) { return ''; }
+}
+
+async function getGeoData(ip) {
+    const cacheKey = `${GEOIP_CACHE_PREFIX}${ip}`;
+    const cached = await pubClient.get(cacheKey);
+    if (cached) return JSON.parse(cached);
+    const geo = geoip.lookup(ip) || {};
+    const countryCode = geo.country || 'XX';
+    const data = {
+        code: countryCode,
+        emoji: getCountryFlagEmoji(countryCode),
+        name: getCountryName(countryCode)
+    };
+    await pubClient.set(cacheKey, JSON.stringify(data), { EX: 86400 });
+    return data;
+}
+
 // Création des clients Redis
 const pubClient = createClient({ url: REDIS_URL });
 const subClient = pubClient.duplicate();
@@ -41,12 +77,22 @@ async function startServer() {
         await Promise.all([pubClient.connect(), subClient.connect()]);
         console.log('✅ [Redis] Clients connected.');
 
+        // Pré-chargement de la base GeoIP
+        try { geoip.lookup('127.0.0.1'); } catch (_) {}
+
         // Initialise moderation utilities
         handleReport = createHandleReport({ pubClient, io });
 
         // Configuration de l'adaptateur Redis pour Socket.IO
         io.adapter(createAdapter(pubClient, subClient));
         console.log('✅ [Socket.IO] Redis adapter configured.');
+
+        // Middleware GeoIP pour chaque connexion
+        io.use(async (socket, next) => {
+            const ip = (socket.handshake.headers['x-forwarded-for'] || socket.handshake.address || '').split(',')[0].trim();
+            socket.geoData = await getGeoData(ip);
+            next();
+        });
 
         // Middleware pour servir les fichiers statiques
         app.use(express.static(path.join(__dirname, 'public')));
@@ -75,7 +121,10 @@ function handleConnection(socket) {
         console.log(`[Join] User ${socket.id} joins with pseudo: "${safePseudo}"`);
         await pubClient.hSet(KEYS.USER_DATA(socket.id), {
             pseudo: safePseudo || 'Anonymous',
-            status: 'searching'
+            status: 'searching',
+            countryCode: socket.geoData.code,
+            countryEmoji: socket.geoData.emoji,
+            countryName: socket.geoData.name
         });
         await findPartner(socket);
     });
@@ -139,9 +188,9 @@ async function findPartner(socket) {
         }
 
         console.log(`[Matchmaking] Partner found for ${socket.id}: ${partnerId}`);
-        const [currentUserPseudo, partnerPseudo] = await Promise.all([
-            pubClient.hGet(KEYS.USER_DATA(socket.id), 'pseudo'),
-            pubClient.hGet(KEYS.USER_DATA(partnerId), 'pseudo')
+        const [currentUserData, partnerData] = await Promise.all([
+            pubClient.hGetAll(KEYS.USER_DATA(socket.id)),
+            pubClient.hGetAll(KEYS.USER_DATA(partnerId))
         ]);
 
         // On utilise une transaction Redis pour assurer l'atomicité
@@ -153,12 +202,26 @@ async function findPartner(socket) {
         // Notifier les deux utilisateurs
         io.to(socket.id).emit('app:state-update', {
             state: 'connected',
-            partner: { pseudo: partnerPseudo },
+            partner: {
+                pseudo: partnerData.pseudo,
+                country: {
+                    code: partnerData.countryCode,
+                    emoji: partnerData.countryEmoji,
+                    name: partnerData.countryName
+                }
+            },
             initiator: true
         });
         io.to(partnerId).emit('app:state-update', {
             state: 'connected',
-            partner: { pseudo: currentUserPseudo },
+            partner: {
+                pseudo: currentUserData.pseudo,
+                country: {
+                    code: currentUserData.countryCode,
+                    emoji: currentUserData.countryEmoji,
+                    name: currentUserData.countryName
+                }
+            },
             initiator: false
         });
 

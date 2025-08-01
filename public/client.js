@@ -75,10 +75,18 @@ document.addEventListener('DOMContentLoaded', () => {
             videoPlaceholder.classList.add('hidden');
             remoteVideo.style.display = 'none';
         },
-        showConnected(partnerPseudo) {
+        showConnected(partnerData) {
             statusOverlay.classList.add('hidden');
             videoPlaceholder.classList.remove('hidden');
-            partnerPseudoPlaceholder.textContent = `Connexion avec ${partnerPseudo}...`;
+            const { pseudo, country } = partnerData;
+            const tooltip = `En direct ${country.name ? `de ${country.name}` : "d'un lieu secret"}`;
+            partnerPseudoPlaceholder.innerHTML = `
+                <span class="partner-name">${pseudo}</span>
+                <span class="country-badge" data-tooltip="${tooltip}">${country.emoji}</span>
+            `;
+            if (window.gsap) {
+                gsap.from('.country-badge', { scale: 0, rotation: -15, duration: 0.7, ease: "elastic.out(1, 0.5)" });
+            }
         },
         showVideo() {
             videoPlaceholder.classList.add('hidden');
@@ -145,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (state === 'waiting') {
             ui.showWaiting();
         } else if (state === 'connected') {
-            ui.showConnected(partner.pseudo);
+            ui.showConnected(partner);
             createPeerConnection();
             if (initiator) {
                 try {
