@@ -14,6 +14,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusText = document.getElementById('status-text');
     const videoPlaceholder = document.getElementById('video-placeholder');
     const partnerPseudoPlaceholder = document.getElementById('partner-pseudo-placeholder');
+
+    const chatMessages = document.getElementById('chat-messages');
+    const chatForm = document.getElementById('chat-form');
+    const chatInput = document.getElementById('chat-input');
     
     const nextBtn = document.getElementById('next-btn');
     const reportBtn = document.getElementById('report-btn');
@@ -22,6 +26,28 @@ document.addEventListener('DOMContentLoaded', () => {
     let localStream;
     let peerConnection;
     let socket;
+
+    const chatUI = {
+        init() {
+            chatForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const text = chatInput.value.trim();
+                if (!text) return;
+                socket.emit('chat:text', { text });
+                this.appendMessage({ text, sender: socket.id });
+                chatInput.value = '';
+            });
+            socket.on('chat:text', this.appendMessage.bind(this));
+        },
+        appendMessage({ text, sender }) {
+            const div = document.createElement('div');
+            div.className = 'chat-message';
+            div.classList.add(sender === socket.id ? 'sent' : 'received');
+            div.textContent = text;
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    };
 
     // 3. Configuration WebRTC
     const rtcConfig = {
@@ -98,6 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 6. Initialisation et gestion Socket.IO
     function initializeSocket() {
         socket = io();
+        chatUI.init();
 
         socket.on('connect_error', (err) => {
             console.error("Connection failed:", err.message);
@@ -196,6 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 8. Contrôles
     nextBtn.addEventListener('click', () => {
+        chatView.classList.add('view-transition');
         socket.emit('user:request-next');
         cleanupConnection();
         ui.showWaiting();

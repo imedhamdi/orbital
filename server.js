@@ -7,6 +7,10 @@ const path = require('path');
 const { Server } = require('socket.io');
 const { createClient } = require('redis');
 const { createAdapter } = require('@socket.io/redis-adapter');
+const sanitize = require('./utils/sanitize');
+const createHandleReport = require('./utils/moderation');
+
+let handleReport;
 
 // 2. Initialisation
 const app = express();
@@ -37,6 +41,9 @@ async function startServer() {
         await Promise.all([pubClient.connect(), subClient.connect()]);
         console.log('✅ [Redis] Clients connected.');
 
+        // Initialise moderation utilities
+        handleReport = createHandleReport({ pubClient, io });
+
         // Configuration de l'adaptateur Redis pour Socket.IO
         io.adapter(createAdapter(pubClient, subClient));
         console.log('✅ [Socket.IO] Redis adapter configured.');
@@ -64,13 +71,24 @@ function handleConnection(socket) {
 
     // Événement: un utilisateur rejoint le système
     socket.on('user:join', async ({ pseudo }) => {
-        console.log(`[Join] User ${socket.id} joins with pseudo: "${pseudo}"`);
-        // Stocke les informations de l'utilisateur dans Redis
+        const safePseudo = sanitize(pseudo);
+        console.log(`[Join] User ${socket.id} joins with pseudo: "${safePseudo}"`);
         await pubClient.hSet(KEYS.USER_DATA(socket.id), {
-            pseudo: pseudo || 'Anonymous',
+            pseudo: safePseudo || 'Anonymous',
             status: 'searching'
         });
         await findPartner(socket);
+    });
+
+    // Chat textuel
+    socket.on('chat:text', async ({ text }) => {
+        const partnerId = await pubClient.hGet(KEYS.USER_DATA(socket.id), 'partnerId');
+        if (!partnerId) return;
+        const cleanText = sanitize(text);
+        const payload = { text: cleanText, sender: socket.id, timestamp: Date.now() };
+        await pubClient.rPush(`orbital:chat:${socket.id}:${partnerId}`, JSON.stringify(payload));
+        await pubClient.expire(`orbital:chat:${socket.id}:${partnerId}`, 3600);
+        io.to(partnerId).emit('chat:text', payload);
     });
 
     // Événements de signalisation WebRTC
@@ -89,8 +107,7 @@ function handleConnection(socket) {
         const partnerId = await pubClient.hGet(KEYS.USER_DATA(socket.id), 'partnerId');
         if (partnerId) {
             console.log(`[Report] User ${socket.id} reported partner ${partnerId}.`);
-            // Ici, on pourrait incrémenter un score de signalement dans Redis
-            // await pubClient.hIncrBy(KEYS.USER_DATA(partnerId), 'reports', 1);
+            await handleReport(partnerId);
         }
     });
 
